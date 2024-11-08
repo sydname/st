@@ -25,8 +25,8 @@ class Camera(QThread):
         self.running = False
 
 class Filter():
-    def __init__(self, filtering, label1, label2, label3, slider1, slider2, slider3):
-        self.filter = filtering
+    def __init__(self, label1, label2, label3, slider1, slider2, slider3):
+        # self.filter = filtering
         self.label1 = label1
         self.label2 = label2
         self.label3 = label3
@@ -56,9 +56,11 @@ class Filter():
         self.slider2.hide()
         self.slider3.hide()
 
-class HSV_Filter():
-    def __init__(self):
-        super().__init__()
+class Color_Filter(Filter):
+    def __init__(self, label1, label2, label3, slider1, slider2, slider3, btnRgb, btnHsv):
+        super().__init__(label1, label2, label3, slider1, slider2, slider3)
+        self.btnRgb = btnRgb
+        self.btnHsv = btnHsv
 
     def setParam(self):
         value_h = self.slider1.value()
@@ -66,6 +68,39 @@ class HSV_Filter():
         value_v = self.slider3.value()
 
         return value_h, value_s, value_v
+    def btnOn(self):
+        self.btnRgb.show()
+        self.btnHsv.show()
+
+    def btnOff(self):
+        self.btnRgb.hide()
+        self.btnHsv.hide()
+
+class HSV_Filter(Color_Filter):
+    def __init__(self, label1, label2, label3, slider1, slider2, slider3, btnRgb, btnHsv):
+        super().__init__(label1, label2, label3, slider1, slider2, slider3, btnRgb, btnHsv) 
+
+    def setText(self):
+        self.label1.setText("H")
+        self.label2.setText("S")
+        self.label3.setText("V")
+
+    def setParam(self):
+        value_h = self.slider1.value()
+        value_s = self.slider2.value()
+        value_v = self.slider3.value()
+
+        return value_h, value_s, value_v
+
+    def setRange(self):
+        self.slider1.setRange(0, 180)
+        self.slider2.setRange(-100, 100)
+        self.slider3.setRange(-100, 100)  
+
+    def setValue(self):
+        self.slider1.setValue(0)
+        self.slider2.setValue(0)
+        self.slider3.setValue(0)
 
     def filtering(self, image, vh, vs, vv):
         src_hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
@@ -81,16 +116,31 @@ class HSV_Filter():
 
         return dst
 
-class RGB_Filter():
-    def __init__(self):
-        super().__init__()  
+class RGB_Filter(Color_Filter):
+    def __init__(self, label1, label2, label3, slider1, slider2, slider3, btnRgb, btnHsv):
+        super().__init__(label1, label2, label3, slider1, slider2, slider3, btnRgb, btnHsv)  
         
+    def setText(self):
+        self.label1.setText("R")
+        self.label2.setText("G")
+        self.label3.setText("B")    
+
     def setParam(self):
         value_1 = self.slider1.value()
         value_2 = self.slider2.value()
         value_3 = self.slider3.value()
 
         return value_1, value_2, value_3
+
+    def setRange(self):
+        self.slider1.setRange(-100, 100)
+        self.slider2.setRange(-100, 100)
+        self.slider3.setRange(-100, 100) 
+
+    def setValue(self):
+        self.slider1.setValue(0)
+        self.slider2.setValue(0)
+        self.slider3.setValue(0)
 
     def filtering(self, image, vr, vg, vb):
         # src_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
@@ -105,7 +155,41 @@ class RGB_Filter():
         # dst = cv2.cvtColor(dst_rgb, cv2.COLOR_RGB2BGR)
 
         return dst    
-    
+
+class Alpha(RGB_Filter):
+    def __init__(self, label1, label2, label3, slider1, slider2, slider3, label4, slider4, btnRgb, btnHsv):
+        super().__init__(label1, label2, label3, slider1, slider2, slider3, btnRgb, btnHsv)
+        self.label4 = label4
+        self.slider4 = slider4
+
+    def setParam(self):
+        super().setParam()
+        value = self.slider4.value()
+
+        return value
+
+    def setRange(self):
+        super().setRange()
+        self.slider4.setRange(0, 100)
+
+    def setValue(self):
+        super().setValue()
+        self.slider4.setValue(100)
+
+    def setText(self):
+        super().setText()
+        self.label4.setText("A")
+
+    def tunrOn(self):
+        super().turnOn()
+        self.label4.show()
+        self.slider4.show()
+
+    def tunrOff(self):
+        super().turnOff()
+        self.label4.hide()
+        self.slider4.hide()
+
 from_class = uic.loadUiType("./camera.ui")[0]
 
 class WindowClass(QMainWindow, from_class):
@@ -118,12 +202,12 @@ class WindowClass(QMainWindow, from_class):
         self.record = Camera(self)
         self.record.daemon = True
 
-        self.hsv_filter = HSV_Filter()
-
-        self.rgb_filter = RGB_Filter()
-        # self.rgb_filter.slider1 = self.slider1
-        # self.rgb_filter.slider2 = self.slider2
-        # self.rgb_filter.slider3 = self.slider3
+        self.filter = Filter(self.label1, self.label2, self.label3,
+                             self.slider1, self.slider2, self.slider3)
+        self.color_filter = Color_Filter(self.label1, self.label2, self.label3, self.slider1, self.slider2, self.slider3, self.btnRgb, self.btnHsv)
+        self.hsv_filter = HSV_Filter(self.label1, self.label2, self.label3, self.slider1, self.slider2, self.slider3, self.btnRgb, self.btnHsv)
+        self.rgb_filter = RGB_Filter(self.label1, self.label2, self.label3, self.slider1, self.slider2, self.slider3, self.btnRgb, self.btnHsv)
+        self.alpha_filter = Alpha(self.label1, self.label2, self.label3, self.slider1, self.slider2, self.slider3, self.label4, self.slider4, self.btnRgb, self.btnHsv)
 
         self.x, self.y = None, None
         self.initUi()
@@ -134,10 +218,10 @@ class WindowClass(QMainWindow, from_class):
         self.labelRecord.hide()
         self.labelRec.hide()
         self.btnRecord.hide()
-        self.btnRgb.hide()
-        self.btnHsv.hide()
         self.btnErase.hide()
         self.btnCapture_2.hide()
+        self.color_filter.btnOff()
+        self.alpha_filter.tunrOff()
 
         self.pixmap = QPixmap()
         self.width = self.pixmap.width()
@@ -158,16 +242,6 @@ class WindowClass(QMainWindow, from_class):
         self.btnVideo.clicked.connect(self.modeRecord)
         self.btnRecord.clicked.connect(self.clickRecord)
 
-        self.label1.hide()
-        self.label2.hide()
-        self.label3.hide()
-        self.label4.hide()
-        self.slider1.hide()
-        self.slider2.hide()
-        self.slider3.hide()
-        self.slider4.hide()
-        self.slider4.setValue(100)
-
         self.sliderScale.setRange(1,5)
         self.sliderScale.valueChanged.connect(self.scaler)
 
@@ -180,22 +254,6 @@ class WindowClass(QMainWindow, from_class):
         self.isColorOn = False
         self.cameraStart()
 
-    # def turnOn(self):
-    #     self.label1.show()
-    #     self.label2.show()
-    #     self.label3.show()
-    #     self.slider1.show()
-    #     self.slider2.show()
-    #     self.slider3.show()
-
-    # def turnOff(self):
-    #     self.label1.hide()
-    #     self.label2.hide()
-    #     self.label3.hide()
-    #     self.slider1.hide()
-    #     self.slider2.hide()
-    #     self.slider3.hide()
-
     def scaler(self):
         scale = self.sliderScale.value()
         self.width = self.width * scale
@@ -203,117 +261,55 @@ class WindowClass(QMainWindow, from_class):
         
     def clickColor(self):
         if self.isColorOn == False:
-            self.btnRgb.show()
-            self.btnHsv.show()
+            self.color_filter.btnOn()
             self.isColorOn = True
         else:
-            self.turnOff()
-            self.btnRgb.hide()
-            self.btnHsv.hide()
+            self.filter.turnOff()
+            self.color_filter.btnOff()
             self.isColorOn = False
 
         self.btnRgb.clicked.connect(self.clickRgb)
         self.btnHsv.clicked.connect(self.clickHsv)
 
+    def updateColor(self, image):
+        value_1, value_2, value_3 = self.color_filter.setParam()
+        if self.color == "RGB":
+            image = self.rgb_filter.filtering(image, value_1, value_2, value_3)
+        elif self.color == "HSV":
+            image = self.hsv_filter.filtering(image, value_1, value_2, value_3)
+        return image
+
     def clickRgb(self):
-        self.color = "RGB"
-        self.btnRgb.hide()
-        self.btnHsv.hide()
-        self.turnOn()
-
-        self.label1.setText("R")
-        self.label2.setText("G")
-        self.label3.setText("B")
-
-        self.slider1.setRange(-100, 100)
-        self.slider2.setRange(-100, 100)
-        self.slider3.setRange(-100, 100)
-
-        self.slider1.setValue(0)
-        self.slider2.setValue(0)
-        self.slider3.setValue(0)
+        self.color_filter.btnOff()
+        self.rgb_filter.turnOn()
+        self.rgb_filter.setText()
+        self.rgb_filter.setRange()
+        self.rgb_filter.setValue()
 
     def clickHsv(self):
-        self.color = "HSV"
-        self.btnRgb.hide()
-        self.btnHsv.hide()
-        self.turnOn()
-
-        self.label1.setText("H")
-        self.label2.setText("S")
-        self.label3.setText("V")
-
-        self.slider1.setRange(0, 180)
-        self.slider2.setRange(-100, 100)
-        self.slider3.setRange(-100, 100)
-
-        self.slider1.setValue(0)
-        self.slider2.setValue(0)
-        self.slider3.setValue(0)
-
-    def setParam(self):
-        value_1 = self.slider1.value()
-        value_2 = self.slider2.value()
-        value_3 = self.slider3.value()
-
-        return value_1, value_2, value_3
-
-    def updateColor(self, image):
-        value_1, value_2, value_3 = self.setParam()
-        if self.color == "RGB":
-            image = self.filter.rgb_filtering(image, value_1, value_2, value_3)
-        elif self.color == "HSV":
-            image = self.filter.hsv_filtering(image, value_1, value_2, value_3)
-        return image
+        self.color_filter.btnOff()
+        self.hsv_filter.turnOn()
+        self.hsv_filter.setText()   
+        self.hsv_filter.setRange()
+        self.hsv_filter.setValue()
 
     def clickDraw(self):
         if self.isDrawOn == False:
             self.isDrawOn = True
 
-            self.label1.show()
-            self.label2.show()
-            self.label3.show()
-            self.label4.show()
-
-            self.slider1.show()
-            self.slider2.show()
-            self.slider3.show()
-            self.slider4.show()
-
-            self.label1.setText("R")
-            self.label2.setText("G")
-            self.label3.setText("B")
-            self.label4.setText("A")
+            self.alpha_filter.tunrOn()
+            self.alpha_filter.setText()
+            self.alpha_filter.setRange()
+            self.alpha_filter.setValue()
 
             self.btnErase.show()
             self.btnColor.hide()
             self.btnFilter.hide()
 
-            # value_1 = self.slider1.value()
-            # value_2 = self.slider2.value()
-            # value_3 = self.slider3.value()
-            # value_4 = self.slider4.value()
-
-            # self.color_rgb = (value_1, value_2, value_3, value_4)
-
-            # print("background-color: rgb{color}; border-radius: 18px; border-style: outset;" .format(color = self.color_rgb))
-
-            # self.btnDraw.setStyleSheet(
-            #     "background-color: rgb{color}; border-radius: 18px; border-style: outset;" .format(color = self.color_rgb))
-            # self.update()
-
         else:
             self.isDrawOn = False
 
-            self.label1.hide()
-            self.label2.hide()
-            self.label3.hide()
-            self.label4.hide()
-
-            self.slider1.hide()
-            self.slider2.hide()
-            self.slider3.hide()
-            self.slider4.hide()
+            self.alpha_filter.tunrOff()
 
             self.btnErase.hide()
             self.btnColor.show()
@@ -326,10 +322,7 @@ class WindowClass(QMainWindow, from_class):
                 self.y = event.y()
                 return
             
-            value_1 = self.slider1.value()
-            value_2 = self.slider2.value()
-            value_3 = self.slider3.value()
-            value_4 = self.slider4.value()
+            value_1, value_2, value_3, value_4 = self.alpha_filter.setParam()
 
             self.color_rgb = (value_1, value_2, value_3, value_4)
             self.btnDraw.setStyleSheet(
@@ -389,9 +382,6 @@ class WindowClass(QMainWindow, from_class):
         self.now = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
         filename = './data/' + self.now + '.png'
 
-        # if self.isColorOn == True:
-        #     cv2.imwrite(filename, cv2.cvtColor(self.img_cvt, cv2.COLOR_RGB2BGR))
-        # else:
         cv2.imwrite(filename, cv2.cvtColor(self.image, cv2.COLOR_RGB2BGR))
 
     def modeRecord(self):
